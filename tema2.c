@@ -1,478 +1,546 @@
 /*DRAGAN Marius 312CB*/
 #include "tema2.h"
 
-
-THeap* AlocaHeap(int nrMax, TFCmp comp) {
-    THeap* h = (THeap*) malloc(sizeof(struct Heap));
-    if (!h) {
-        return NULL;
-    }
-
-    h->v = (TLista_sateliti *) malloc(nrMax * sizeof(TLista_sateliti));
-    if (!h->v) {
-		free(h);
+/*Allocates memory for the Min Heap structure*/
+THeap *alloc_heap(int max_size, TFCmp comp)
+{
+	THeap *h = (THeap *)malloc(sizeof(struct Heap));
+	if (!h)
+	{
 		return NULL;
 	}
 
-    h->nrMax = nrMax;
-    h->nrElem = 0;
-    h->comp = comp;
+	h->v = (TSatellite *)malloc(max_size * sizeof(TSatellite));
+	if (!h->v)
+	{
+		return NULL;
+	}
 
-    return h;
-}
-Tarbore * create_nod(int frec,char *str,Tarbore *st,Tarbore *dr){
-    Tarbore *aux=(Tarbore *)malloc(sizeof(Tarbore));
-    if (aux==NULL)
-    return NULL;
-    aux->frec=frec;
-    aux->nume=strdup(str);
-    aux->dr=dr;
-    aux->st=st;
-    return aux;
-    //creeam un nod din arborele nostru cu frecventa frec si numele str si copiii st,dr
+	h->max_size = max_size;
+	h->current_size = 0;
+	h->comp = comp;
+
+	return h;
 }
 
-int RelMinHeap(TLista_sateliti  a, TLista_sateliti b) {
-    if (a.frec != b.frec)
-	return a.frec < b.frec;
-    return strcmp(a.nume, b.nume) < 0;
+/*Allocates and initializes a new binary tree node*/
+Ttree *create_nod(int freq, char *str, Ttree *left, Ttree *right)
+{
+	Ttree *aux = (Ttree *)malloc(sizeof(Ttree));
+	if (aux == NULL)
+		return NULL;
+	aux->freq = freq;
+	aux->name = strdup(str);
+	aux->right = right;
+	aux->left = left;
+	return aux;
 }
 
-void AfisareHeap(THeap* h, int pos,FILE * out) {
-    if (pos >= h->nrElem) {      
-        fprintf(out,"-"); 
-        return;
-    }
-    
-    fprintf(out," %d<->%s ", h->v[pos].frec,h->v[pos].nume);
-
-    if (2 * pos + 1 >= h->nrMax && 2 * pos + 2 >=h->nrMax)
-        return;
-
-	fprintf(out,"(");
-	
-    AfisareHeap(h, 2 * pos + 1,out);
-	fprintf(out,",");
-	
-    AfisareHeap(h, 2 * pos + 2,out);
-	fprintf(out,")");
+/*Comparator for the Min Heap: sorts by frequency, then lexicographically*/
+int RelMinHeap(TSatellite a, TSatellite b)
+{
+	if (a.freq != b.freq)
+		return a.freq < b.freq;
+	return strcmp(a.name, b.name) < 0;
 }
 
-void DistrugeHeap(THeap **h) {
-    //eliberare heap
-    for (int i=0; i < (*(h))->nrElem; i++)
-        free((*(h))->v[i].nume);
+/*Recursively displays the heap*/
+void displayHeap(THeap *h, int pos, FILE *out)
+{
+	if (pos >= h->current_size)
+	{
+		fprintf(out, "-");
+		return;
+	}
+
+	fprintf(out, " %d<->%s ", h->v[pos].freq, h->v[pos].name);
+
+	if (2 * pos + 1 >= h->max_size && 2 * pos + 2 >= h->max_size)
+		return;
+
+	fprintf(out, "(");
+
+	displayHeap(h, 2 * pos + 1, out);
+	fprintf(out, ",");
+
+	displayHeap(h, 2 * pos + 2, out);
+	fprintf(out, ")");
+}
+
+/*Frees all memory allocated for the heap and its elements*/
+void destroyHeap(THeap **h)
+{
+	// eliberare heap
+	for (int i = 0; i < (*(h))->current_size; i++)
+		free((*(h))->v[i].name);
 	free((*h)->v);
 	free(*h);
-	*h = NULL; 
+	*h = NULL;
 }
 
-void pushUP(THeap *h, int poz) {
-    int indice_tata = (poz-1)/2;
-    while (poz > 0 && !h->comp(h->v[indice_tata], h->v[poz])) {
-        TLista_sateliti aux = h->v[poz];
-        h->v[poz] = h->v[indice_tata];
-        h->v[indice_tata] = aux;
-        poz = indice_tata;
-        indice_tata = (poz-1)/2;
-    }
-    //reordonare heap dupa introducere
+/*Restores the Min Heap properly by bubbling up the element at 'pos*/
+void pushUP(THeap *h, int pos)
+{
+	int indice_tata = (pos - 1) / 2;
+	while (pos > 0 && !h->comp(h->v[indice_tata], h->v[pos]))
+	{
+		TSatellite aux = h->v[pos];
+		h->v[pos] = h->v[indice_tata];
+		h->v[indice_tata] = aux;
+		pos = indice_tata;
+		indice_tata = (pos - 1) / 2;
+	}
 }
 
-void InsertHeap(THeap *h, int frec, char *str, Tarbore *copilst, Tarbore *copildr) {
-    h->v[h->nrElem].frec = frec;
-    h->v[h->nrElem].nume = strdup(str);
-    h->v[h->nrElem].nod = create_nod(frec,str,copilst,copildr);
-    h->nrElem++;
-    h->nrMax++;
-    //inseram elementul la final si reordonam heap
-    pushUP (h,h->nrElem-1);
+/*Inserts a new satellite node into the Min Heap*/
+void InsertHeap(THeap *h, int freq, char *str, Ttree *leftChild, Ttree *rightChild)
+{
+	h->v[h->current_size].freq = freq;
+	h->v[h->current_size].name = strdup(str);
+	h->v[h->current_size].node = create_nod(freq, str, leftChild, rightChild);
+	h->current_size++;
+	h->max_size++;
+	pushUP(h, h->current_size - 1);
 }
 
-void pushDown(int poz, THeap *h) {
-    //reordonarea heap-ului dupa ce am extras elementul
-    //luat din exercitiul din laborator
-    int indice_fiu_st = 2 * poz + 1;
-    while (indice_fiu_st<h->nrElem) {
-        int s = indice_fiu_st;
-        int indice_fiu_dr = 2 * poz + 2;
-        if (indice_fiu_dr < h->nrElem) {
-            if (h->v[s].frec != h->v[indice_fiu_dr].frec) {
-                if (h->v[s].frec > h->v[indice_fiu_dr].frec) {
-                    s = indice_fiu_dr;
-                }
-            }
-            else {
-                    if (strcmp(h->v[s].nume, h->v[indice_fiu_dr].nume) > 0) {
-                        s = indice_fiu_dr;
-                }
-            }
-        }
-        if (h->v[poz].frec < h->v[s].frec)
-        break;
-        else if (h->v[poz].frec == h->v[s].frec && strcmp(h->v[poz].nume, h->v[s].nume) < 0) {
-            break;
-        }
-        else {
-            TLista_sateliti aux = h->v[poz];
-            h->v[poz] = h->v[s];
-            h->v[s] = aux;
-            poz = s;
-            indice_fiu_st = 2 * poz + 1;
-        }
-    }
-}
-TLista_sateliti ExtrHeap(THeap *h) {
-    h->nrElem--;
-    TLista_sateliti aux = h->v[0];
-    h->v[0] = h->v[h->nrElem];
-    h->nrMax--;
-    //extragem primul element din heap si reordonam arborele de heap-ul dupa aceea
-    pushDown(0,h);
-    return aux;
-}
-
-Tarbore * cerinta1(FILE *in) {
-    int n;
-    fscanf(in,"%d",&n);
-    TLista_sateliti * v = malloc(sizeof(TLista_sateliti)*n);
-    if (v == NULL)
-    return NULL;
-    THeap* h = NULL;
-    for (int i = 0; i < n; i++) {
-        fscanf(in,"%d", &v[i].frec);
-        char str[15];
-        fscanf(in,"%s", str);
-        v[i].nume = strdup(str);
-        if (v[i].nume == NULL) {
-            for (int j = 0; j < i; j++)
-               free(v[j].nume);
-            free(v);
-            return NULL;
-        }
-        v[i].nod = create_nod(v[i].frec, v[i].nume, NULL, NULL);
-        if (v[i].nod == NULL) {
-            for (int j = 0;j < i; j++) {
-                free(v[j].nod->nume);
-                free(v[j].nod);
-            }
-            for (int j = 0; j < n; j++) {
-                free(v[j].nume);
-            free(v);
-            return NULL;
-            }
-        }
-    //citire noduri initiale
-    }
-    h = AlocaHeap(n, RelMinHeap);
-    if (h == NULL){
-        for (int i = 0; i < n; i++) {
-            free(v[i].nume);
-            free(v[i].nod->nume);
-            free(v[i].nod);
-        }
-    }
-    for (int i = 0; i < n; i++) {
-        InsertHeap(h, v[i].frec, v[i].nume, v[i].nod->st, v[i].nod->dr);
-        //inserare in heap
-    }
-    while (h->nrElem>1) {
-        //construirea arborelui cat timp in heap avem cel putin 2 elemente
-        TLista_sateliti aux_1 = ExtrHeap(h);
-        TLista_sateliti aux_2 = ExtrHeap(h);
-        if (aux_1.frec > aux_2.frec) {
-            TLista_sateliti aux = aux_1;
-            aux_1 = aux_2;
-            aux_2 = aux;
-        }
-        else if (aux_1.frec == aux_2.frec && strcmp(aux_1.nume, aux_2.nume) > 0) {
-            TLista_sateliti aux = aux_1;
-            aux_1 = aux_2;
-            aux_2 = aux;
-        }
-        char *str = malloc(strlen(aux_1.nume) + strlen(aux_2.nume) + 1);
-        strcpy(str,aux_1.nume);
-        strcat(str,aux_2.nume);
-        int s = aux_1.frec;
-        s = s+aux_2.frec;
-       // Tarbore *nod_nou=create_nod(s,str,aux_1.nod,aux_2.nod);/*stanga dreapta*/
-       // if (nod_nou==NULL)
-           // return 0;
-        InsertHeap(h, s, str, aux_1.nod, aux_2.nod);
-        free(str);
-        free(aux_1.nume);
-        free(aux_2.nume);;
-        //free(nod_nou);
-    }
-    //eliberari de memorie
-    for (int i = 0; i < n; i++) {
-        free(v[i].nume);
-        free(v[i].nod->nume);
-        free(v[i].nod);
-    }
-    free(v);
-    Tarbore * aux;
-    aux=h->v[h->nrElem-1].nod;
-    DistrugeHeap(&h);
-    return aux;
+/*Restore the Min-Heap properly by bubbling down the element at 'pos'*/
+void pushDown(int pos, THeap *h)
+{
+	int leftChildIdx = 2 * pos + 1;
+	while (leftChildIdx < h->current_size)
+	{
+		int s = leftChildIdx;
+		int rightChildIdx = 2 * pos + 2;
+		if (rightChildIdx < h->current_size)
+		{
+			if (h->v[s].freq != h->v[rightChildIdx].freq)
+			{
+				if (h->v[s].freq > h->v[rightChildIdx].freq)
+				{
+					s = rightChildIdx;
+				}
+			}
+			else
+			{
+				if (strcmp(h->v[s].name, h->v[rightChildIdx].name) > 0)
+				{
+					s = rightChildIdx;
+				}
+			}
+		}
+		if (h->v[pos].freq < h->v[s].freq)
+			break;
+		else if (h->v[pos].freq == h->v[s].freq && strcmp(h->v[pos].name, h->v[s].name) < 0)
+		{
+			break;
+		}
+		else
+		{
+			TSatellite aux = h->v[pos];
+			h->v[pos] = h->v[s];
+			h->v[s] = aux;
+			pos = s;
+			leftChildIdx = 2 * pos + 1;
+		}
+	}
 }
 
-TCoada* InitQ () {
-  TCoada* c;
-  c = (TCoada*)malloc(sizeof(TCoada));
-  if (!c) return NULL;                  
-  c->inc = NULL;
-  c->sf=NULL;
-  return c;          
+/*Extract the minimul element from the Min Heap*/
+TSatellite ExtrHeap(THeap *h)
+{
+	h->current_size--;
+	TSatellite aux = h->v[0];
+	h->v[0] = h->v[h->current_size];
+	h->max_size--;
+	pushDown(0, h);
+	return aux;
 }
 
-int IntrQ(TCoada *c, Tarbore * nod)   { 
-  TLista aux;
-  aux=(TLista)malloc(sizeof(TCelula));
-  if (!aux) return 0;
-  aux->nod = nod;
-  aux->urm = NULL;
-    if (c->sf == NULL) {
-        c->inc = aux;
-        c->sf = aux;
-    }
-    else {
-        c->sf->urm = aux;
-        c->sf = aux;
-    }
-  return 1;             
+/*Build the Huffman-style tree from input data*/
+Ttree *build_huffmann_tree(FILE *in)
+{
+	int n;
+	fscanf(in, "%d", &n);
+	TSatellite *v = malloc(sizeof(TSatellite) * n);
+	if (v == NULL)
+		return NULL;
+	THeap *h = NULL;
+	/*Read initial sattelite nodes*/
+	for (int i = 0; i < n; i++)
+	{
+		fscanf(in, "%d", &v[i].freq);
+		char str[15];
+		fscanf(in, "%s", str);
+		v[i].name = strdup(str);
+		if (v[i].name == NULL)
+		{
+			for (int j = 0; j < i; j++)
+				free(v[j].name);
+			free(v);
+			return NULL;
+		}
+		v[i].node = create_nod(v[i].freq, v[i].name, NULL, NULL);
+		if (v[i].node == NULL)
+		{
+			for (int j = 0; j < i; j++)
+			{
+				free(v[j].node->name);
+				free(v[j].node);
+			}
+			for (int j = 0; j < n; j++)
+			{
+				free(v[j].name);
+				free(v);
+				return NULL;
+			}
+		}
+	}
+	h = alloc_heap(n, RelMinHeap);
+	if (h == NULL)
+	{
+		for (int i = 0; i < n; i++)
+		{
+			free(v[i].name);
+			free(v[i].node->name);
+			free(v[i].node);
+		}
+	}
+	/*Populate the Min Heap*/
+	for (int i = 0; i < n; i++)
+	{
+		InsertHeap(h, v[i].freq, v[i].name, v[i].node->left, v[i].node->right);
+	}
+	/*Build the tree by extracting the two minimums and merging them*/
+	while (h->current_size > 1)
+	{
+		TSatellite aux_1 = ExtrHeap(h);
+		TSatellite aux_2 = ExtrHeap(h);
+		if (aux_1.freq > aux_2.freq)
+		{
+			TSatellite aux = aux_1;
+			aux_1 = aux_2;
+			aux_2 = aux;
+		}
+		else if (aux_1.freq == aux_2.freq && strcmp(aux_1.name, aux_2.name) > 0)
+		{
+			TSatellite aux = aux_1;
+			aux_1 = aux_2;
+			aux_2 = aux;
+		}
+		char *str = malloc(strlen(aux_1.name) + strlen(aux_2.name) + 1);
+		strcpy(str, aux_1.name);
+		strcat(str, aux_2.name);
+		int s = aux_1.freq;
+		s = s + aux_2.freq;
+		InsertHeap(h, s, str, aux_1.node, aux_2.node);
+		free(str);
+		free(aux_1.name);
+		free(aux_2.name);
+		;
+	}
+	/*Clean up temporary arrays*/
+	for (int i = 0; i < n; i++)
+	{
+		free(v[i].name);
+		free(v[i].node->name);
+		free(v[i].node);
+	}
+	free(v);
+	Ttree *aux;
+	aux = h->v[h->current_size - 1].node;
+	destroyHeap(&h);
+	return aux;
 }
 
-Tarbore *ExtrQ(TCoada *c)  {   
-    TLista aux;
-    Tarbore* aux_ret;
-    aux=c->inc;
-    aux_ret=aux->nod;
-    aux=c->inc;
-    c->inc=aux->urm;
-    if (c->inc == NULL)
-    c->sf = NULL;
-    free(aux);  
-    return aux_ret;                  
+/*Initializes an empty Queue for BFS traversal*/
+TQueue *InitQ()
+{
+	TQueue *c;
+	c = (TQueue *)malloc(sizeof(TQueue));
+	if (!c)
+		return NULL;
+	c->head = NULL;
+	c->tail = NULL;
+	return c;
 }
 
-void afisare_cerinta1(Tarbore * arb, FILE *out) {
-    //pentru afisarea pe niveluri a nodurilor am folosit o coada
-    TCoada *c = InitQ();
-    if (c == NULL) return;
-    IntrQ(c, arb);
-    int z = 1;
-    //numarul de noduri de pe nivelul curent
-    while ((c->inc) != NULL) {
-        int i,j;
-        j = 0;
-        for (i = 0; i < z; i++) {
-            Tarbore *aux = ExtrQ(c);
-            //extragem din coada
-            fprintf(out,"%d-%s", aux->frec, aux->nume);
-            if (i!=(z-1))
-            //daca nu suntem la ultimul nod
-            fprintf(out," ");
-            if (aux->st != NULL) {
-                IntrQ(c, aux->st);
-                //introducere in coada
-                j++;
-                //avem copil pe stanga
-            }
-            if (aux->dr != NULL) {
-                IntrQ(c, aux->dr);
-                //introducere in coada
-                j++;
-                //avem copil pe dreapta
-            }
-        }
-        fprintf(out, "\n");
-        z = j;
-        //numarul de noduri de pe nivelul urmator(j)
-    }
-    free(c);
-    c=NULL;
+/*Enqueues a tree node*/
+int enqueue(TQueue *c, Ttree *node)
+{
+	TList aux;
+	aux = (TList)malloc(sizeof(TCell));
+	if (!aux)
+		return 0;
+	aux->node = node;
+	aux->next = NULL;
+	if (c->tail == NULL)
+	{
+		c->head = aux;
+		c->tail = aux;
+	}
+	else
+	{
+		c->tail->next = aux;
+		c->tail = aux;
+	}
+	return 1;
 }
 
-void cerinta2(FILE *in, Tarbore * arb, FILE *out) {
-    int nr_codif;
-    fscanf(in, "%d", &nr_codif);
-    for (int i = 0; i < nr_codif; i++) {
-        char str[1000];
-        fscanf(in, "%s", str);
-        Tarbore *ant,*p = arb;
-        for (int j = 0;j < strlen(str); j++) {
-            if (str[j] == '0') {  
-                ant = p;
-                p = p->st;
-                //mergem pe stanga
-            }
-            if (str[j] == '1') {   
-                ant = p;
-                p = p->dr;
-                //mergem pe dreapta
-            }
-            if (p == NULL) {
-                //nodul era frunza si afisam frunza
-                fprintf(out, "%s ", ant->nume);
-                p = arb;
-                //continuam de la radacina
-                j--;
-            }
-        }
-        if (p == NULL)
-            fprintf(out, "%s ", ant->nume);
-            //se poate si fara else
-        else if (p->st == NULL && p->dr == NULL)
-                fprintf(out, "%s", p->nume);
-        fprintf(out, "\n");
-    }
+/*Dequeues and returns a tree node*/
+Ttree *dequeue(TQueue *c)
+{
+	TList aux;
+	Ttree *aux_ret;
+	aux = c->head;
+	aux_ret = aux->node;
+	aux = c->head;
+	c->head = aux->next;
+	if (c->head == NULL)
+		c->tail = NULL;
+	free(aux);
+	return aux_ret;
 }
 
-void ParcurgereRSD(Tarbore *arb, char *nume_cod, char rezultat[1000], int nr, int *ok) {
-    if (arb == NULL || (*ok) == 1) return;
-    if (strcmp(arb->nume,nume_cod) == 0 ){  
-        rezultat[nr] = '\0';
-        *ok = 1;
-        return;
-    }
-    if (arb->st && (*ok) == 0) {
-        rezultat[nr] = '0';
-        ParcurgereRSD(arb->st, nume_cod, rezultat, nr+1, ok);
-    }
-    if (arb->dr && (*ok) == 0) {
-        rezultat[nr] = '1';
-        ParcurgereRSD(arb->dr, nume_cod, rezultat, nr+1, ok);
-    }
-    return ;
+/*Perfoms a level-order travers(BFS) and prints the network topology*/
+void printTreeLevelOrder(Ttree *tree, FILE *out)
+{
+	TQueue *c = InitQ();
+	if (c == NULL)
+		return;
+	enqueue(c, tree);
+	int z = 1; /*Nodes on the current level*/
+	while ((c->head) != NULL)
+	{
+		int i, j;
+		j = 0;
+		for (i = 0; i < z; i++)
+		{
+			Ttree *aux = dequeue(c);
+			fprintf(out, "%d-%s", aux->freq, aux->name);
+			if (i != (z - 1))
+				fprintf(out, " ");
+			if (aux->left != NULL)
+			{
+				enqueue(c, aux->left);
+				j++;
+			}
+			if (aux->right != NULL)
+			{
+				enqueue(c, aux->right);
+				j++;
+			}
+		}
+		fprintf(out, "\n");
+		z = j;
+		/*Nodes on the next level*/
+	}
+	free(c);
+	c = NULL;
 }
 
-void cerinta3(FILE * in, Tarbore *arb, FILE *out ) {
-    int nr_nod;
-    fscanf(in, "%d", &nr_nod);
-    //numarul de noduri ce trebuiesc codificate
-    int lg = strlen(arb->nume);
-    char *codificare_finala = malloc(1000 * nr_nod*sizeof(char));
-    if (codificare_finala == NULL)
-    return;
-    //am folosit 1000 ca m am gandit de la exercitiul anterior,ca o codificare poate avea maxim 1000 de caractere
-    //in caz de este pentru nod de pe ultimul nivel
-    codificare_finala[0] = '\0';
-    for (int i = 0; i < nr_nod; i++) {
-        char *nume_nod = malloc(sizeof(char) * lg);//char nod[15]
-        if (nume_nod == NULL) {
-            free(codificare_finala);
-            return;
-        }
-        fscanf(in, "%s", nume_nod);
-        char rezultat[1000] = "";
-        int ok = 0;
-        ParcurgereRSD (arb, nume_nod, rezultat, 0, &ok);
-        strcat(codificare_finala, rezultat);
-        free(nume_nod);
-    }
-    fprintf(out,"%s", codificare_finala);
-    free(codificare_finala);
+/*Decodes a binary sequence(0=left 1=right) into satellite names*/
+void decodeSattelitePaths(FILE *in, Ttree *tree, FILE *out)
+{
+	int numCodes;
+	fscanf(in, "%d", &numCodes);
+	for (int i = 0; i < numCodes; i++)
+	{
+		char str[1000];
+		fscanf(in, "%s", str);
+		Ttree *pre, *p = tree;
+		for (int j = 0; j < strlen(str); j++)
+		{
+			if (str[j] == '0')
+			{
+				pre = p;
+				p = p->left;
+			}
+			if (str[j] == '1')
+			{
+				pre = p;
+				p = p->right;
+			}
+			/*if a leaf is reached,print and reset to root*/
+			if (p == NULL)
+			{
+				fprintf(out, "%s ", pre->name);
+				p = tree;
+				j--;
+			}
+		}
+		if (p == NULL)
+			fprintf(out, "%s ", pre->name);
+		// se poate si fara else
+		else if (p->left == NULL && p->right == NULL)
+			fprintf(out, "%s", p->name);
+		fprintf(out, "\n");
+	}
 }
 
-void ParcurgereRSD4(Tarbore * arb, int *ok, char * cautat) {
-    if (!arb) return;
-    if (strcmp(arb->nume,cautat) == 0) {
-        (*ok) = 1;
-        return;
-    }
-    ParcurgereRSD4(arb->st, ok, cautat);
-    ParcurgereRSD4(arb->dr, ok ,cautat);
-    return ;
-    //parcurgerea RSD pentru acest exercitiu
+/*DFS heklper to find the binary path to a target node*/
+void traverseAndEncode(Ttree *tree, char *code_name, char result[1000], int nr, int *ok)
+{
+	if (tree == NULL || (*ok) == 1)
+		return;
+	if (strcmp(tree->name, code_name) == 0)
+	{
+		result[nr] = '\0';
+		*ok = 1;
+		return;
+	}
+	if (tree->left && (*ok) == 0)
+	{
+		result[nr] = '0';
+		traverseAndEncode(tree->left, code_name, result, nr + 1, ok);
+	}
+	if (tree->right && (*ok) == 0)
+	{
+		result[nr] = '1';
+		traverseAndEncode(tree->right, code_name, result, nr + 1, ok);
+	}
+	return;
 }
 
-void verificare_existenta_in_subarbore(Tarbore *arb, char ** nume_cod, int nr_cod, char **rez) {
-    int i;
-    int ok;
-    int nr = 0;
-    if (arb == NULL) return;
-    for (i =0 ; i <nr_cod; i++) {
-        ok = 0;
-        ParcurgereRSD4(arb, &ok, nume_cod[i]);
-        //cautam in subarborele curent
-        if (ok == 1) nr++;
-    }
-    if (nr == nr_cod) {
-        if (*rez != NULL)
-            free(*rez);
-        (*rez) = strdup(arb->nume);
-    }
-    nr = 0;
-    //o sa verificam toti subarbori ce au ca radacina copiii nodului curent
-    verificare_existenta_in_subarbore(arb->st, nume_cod, nr_cod,rez);
-    verificare_existenta_in_subarbore(arb->dr, nume_cod, nr_cod,rez);
-    return ;
+/*Encodes satellite names into binary routing paths*/
+void encodeSattelitePaths(FILE *in, Ttree *tree, FILE *out)
+{
+	int num_nodes;
+	fscanf(in, "%d", &num_nodes);
+	// numarul de noduri ce trebuiesc codificate
+	int max_len = strlen(tree->name);
+	char *final_encoding = malloc(1000 * num_nodes * sizeof(char));
+	if (final_encoding == NULL)
+		return;
+	final_encoding[0] = '\0';
+	for (int i = 0; i < num_nodes; i++)
+	{
+		char *name_nod = malloc(sizeof(char) * max_len);
+		if (name_nod == NULL)
+		{
+			free(final_encoding);
+			return;
+		}
+		fscanf(in, "%s", name_nod);
+		char result[1000] = "";
+		int ok = 0;
+		traverseAndEncode(tree, name_nod, result, 0, &ok);
+		strcat(final_encoding, result);
+		free(name_nod);
+	}
+	fprintf(out, "%s", final_encoding);
+	free(final_encoding);
 }
 
-void cerinta4(FILE *in, Tarbore *arb, FILE * out) {
-    int nr_cod;
-    fscanf(in, "%d", &nr_cod);
-    char **nume_cod = (char **)malloc(nr_cod * sizeof(char*));
-    if (nume_cod == NULL) return;
-    int lg = strlen(arb->nume);
-    //lungimea maxima a unui nume a unui nod
-    for (int i = 0; i < nr_cod; i++) {
-        nume_cod[i] = (char*)malloc(lg * sizeof(char));
-        if (nume_cod[i] == NULL) {
-            free(nume_cod);
-            return ;
-        }
-        fscanf(in, "%s", nume_cod[i]);
-    }
-    char *rez = NULL;
-    //verificam daca exista in subarbori
-    verificare_existenta_in_subarbore(arb, nume_cod, nr_cod, &rez);
-    fprintf(out, "%s", rez);
-    free(rez);
-    for (int i = 0; i < nr_cod; i++) {
-        free(nume_cod[i]);
-    }
-    free(nume_cod);
+/*Checks if a target node exists in the given subtree*/
+void findInSubtree(Ttree *tree, int *ok, char *target)
+{
+	if (!tree)
+		return;
+	if (strcmp(tree->name, target) == 0)
+	{
+		(*ok) = 1;
+		return;
+	}
+	findInSubtree(tree->left, ok, target);
+	findInSubtree(tree->right, ok, target);
+	return;
 }
 
-void Distrugerearb(Tarbore * arb) {
-    if (arb == NULL) return;
-    Distrugerearb(arb->st);
-    Distrugerearb(arb->dr);
-    free(arb->nume);
-    free(arb);
+/*Helper for finding the Lowest Common Ancestor by validating node existence*/
+void checkExistenceInSubtree(Ttree *tree, char **code_name, int count, char **res)
+{
+	int i;
+	int ok;
+	int found_count = 0;
+	if (tree == NULL)
+		return;
+	for (i = 0; i < count; i++)
+	{
+		ok = 0;
+		findInSubtree(tree, &ok, code_name[i]);
+		if (ok == 1)
+			found_count++;
+	}
+	if (found_count == count)
+	{
+		if (*res != NULL)
+			free(*res);
+		(*res) = strdup(tree->name);
+	}
+	found_count = 0;
+	checkExistenceInSubtree(tree->left, code_name, count, res);
+	checkExistenceInSubtree(tree->right, code_name, count, res);
+	return;
 }
 
-int main(int argc, char * argv[]) {
-   char *input = argv[2];
-   char *output = argv[3];
-   char *cerinta = argv[1];
-    FILE * in = fopen(input, "r");
-    if (in == NULL)
-    return 0;
-    FILE * out = fopen(output, "wa");
-    if (out == NULL)
-    return 0;
-    //task comun tuturor
-    Tarbore  *arb = (cerinta1(in));
-    if (arb == NULL) return 0;
-    //task1
-    if (strcmp(cerinta, "-c1") == 0)
-    afisare_cerinta1(arb, out);
-    //task2
-    if (strcmp(cerinta, "-c2") == 0)
-    cerinta2(in, arb ,out);
-    //task3
-    if (strcmp(cerinta, "-c3") == 0)
-    cerinta3(in, arb, out);
-    //task4
-    if (strcmp(cerinta, "-c4") == 0)
-    cerinta4(in, arb, out);
-    //DistrugeHeap(&h);
-    Distrugerearb(arb);
-    //eliberare memorie arbore
-    arb = NULL;
-    fclose(in);
-    fclose(out);
-} 
+/*Finds the Lowest Common Ancestor for a list of nodes*/
+void findCommonAncestor(FILE *in, Ttree *tree, FILE *out)
+{
+	int count;
+	fscanf(in, "%d", &count);
+	char **code_name = (char **)malloc(count * sizeof(char *));
+	if (code_name == NULL)
+		return;
+	int max_len = strlen(tree->name);
+	for (int i = 0; i < count; i++)
+	{
+		code_name[i] = (char *)malloc(max_len * sizeof(char));
+		if (code_name[i] == NULL)
+		{
+			free(code_name);
+			return;
+		}
+		fscanf(in, "%s", code_name[i]);
+	}
+	char *res = NULL;
+	checkExistenceInSubtree(tree, code_name, count, &res);
+	fprintf(out, "%s", res);
+	free(res);
+	for (int i = 0; i < count; i++)
+	{
+		free(code_name[i]);
+	}
+	free(code_name);
+}
+
+/*Recursively frees the entire binary tree*/
+void destroytree(Ttree *tree)
+{
+	if (tree == NULL)
+		return;
+	destroytree(tree->left);
+	destroytree(tree->right);
+	free(tree->name);
+	free(tree);
+}
+
+int main(int argc, char *argv[])
+{
+	char *input = argv[2];
+	char *output = argv[3];
+	char *task = argv[1];
+	FILE *in = fopen(input, "r");
+	if (in == NULL)
+		return 0;
+	FILE *out = fopen(output, "wa");
+	if (out == NULL)
+		return 0;
+	/*Core task: Build the network tree*/
+	Ttree *tree = (build_huffmann_tree(in));
+	if (tree == NULL)
+		return 0;
+	/*Execute requested task based on flag*/
+	if (strcmp(task, "-c1") == 0)
+		printTreeLevelOrder(tree, out);
+	if (strcmp(task, "-c2") == 0)
+		decodeSattelitePaths(in, tree, out);
+	if (strcmp(task, "-c3") == 0)
+		encodeSattelitePaths(in, tree, out);
+	if (strcmp(task, "-c4") == 0)
+		findCommonAncestor(in, tree, out);
+	/*Clean up*/
+	destroytree(tree);
+	tree = NULL;
+	fclose(in);
+	fclose(out);
+}
