@@ -1,9 +1,9 @@
 #DRAGAN Marius 312CB
 build:
-	gcc -o tema2 tema2.c 
+	gcc -o SatteliteNetwork SatteliteNetwork.c 
 run:
-	./tema2 $(ARGS)
+	./SatteliteNetwork $(ARGS)
 clean:
-	rm tema2
+	rm SatteliteNetwork
 valgrind:
-	valgrind --leak-check=yes --track-origins=yes ./tema2 $(ARGS)
+	valgrind --leak-check=yes --track-origins=yes ./SatteliteNetwork $(ARGS)

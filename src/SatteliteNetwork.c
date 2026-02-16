@@ -1,4 +1,4 @@
-/*DRAGAN Marius 312CB*/
+/*DRAGAN Marius*/
 #include "tema2.h"
 
 /*Allocates memory for the Min Heap structure*/

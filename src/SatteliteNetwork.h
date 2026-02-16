@@ -1,4 +1,4 @@
-/*DRAGAN Marius 312CB*/
+/*DRAGAN Marius */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
