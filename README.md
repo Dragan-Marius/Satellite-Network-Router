@@ -23,4 +23,4 @@ How to Build and Run
 A `Makefile` is provided for easy compilation.
 ```bash
 make build
-./tema2 <task-flag> <input-file> <output-file>
+./SatteliteNetwork <task-flag> <input-file> <output-file>
