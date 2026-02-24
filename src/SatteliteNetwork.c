@@ -1,5 +1,5 @@
 /*DRAGAN Marius*/
-#include "tema2.h"
+#include "SatteliteNetwork.h"
 
 /*Allocates memory for the Min Heap structure*/
 THeap *alloc_heap(int max_size, TFCmp comp)
