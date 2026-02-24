@@ -24,3 +24,8 @@ A `Makefile` is provided for easy compilation.
 ```bash
 make build
 ./SatteliteNetwork <task-flag> <input-file> <output-file>
+#Task Flags
+-c1: Network Topology - Perfoms a level-order (BFS) traversal to display the network
+-c2: Decode Paths - Decodes binary sequence into satellite names using the Huffmann tree
+-c3: Encode Paths - Converts satellite names into binary routing paths via DFS
+-c4: Find LCA - Identifies the Lowest Commons Ancestor for a group of satellities

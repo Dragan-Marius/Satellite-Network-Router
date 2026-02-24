@@ -1,9 +1,9 @@
 #DRAGAN Marius 312CB
 build:
-	gcc -o SatteliteNetwork SatteliteNetwork.c 
+	gcc -o SatelliteNetwork SatelliteNetwork.c 
 run:
-	./SatteliteNetwork $(ARGS)
+	./SatelliteNetwork $(ARGS)
 clean:
-	rm SatteliteNetwork
+	rm SatelliteNetwork
 valgrind:
-	valgrind --leak-check=yes --track-origins=yes ./SatteliteNetwork $(ARGS)
+	valgrind --leak-check=yes --track-origins=yes ./SatelliteNetwork $(ARGS)
